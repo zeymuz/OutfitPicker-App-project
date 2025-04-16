@@ -39,14 +39,12 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { padding: isSmallDevice ? 2 : 6 }]}>
       <LinearGradient
-        colors={['#FF6E40', '#FF3D00', '#BF360C']}
-        // start={{ x: 0.5, y: 1 }}   // Start at bottom center
-        // end={{ x: 0.5, y: 0 }}     // End at top center
-        start={{ x: 1, y: 0 }}   // Start at bottom center
-        end={{ x: 1, y: 1 }}     // End at top center
-        locations={[0, 0.5, 1]} 
-        style={styles.gradientBackground}
-      />
+  colors={['floralwhite','darkred']}
+  start={{ x: 1, y: 0 }}
+  end={{ x: 1, y: 1 }}
+  locations={[0.2, 1]}
+  style={styles.gradientBackground}
+/>
       {categories.map((category) => (
         <TouchableOpacity 
           key={category.key}
@@ -66,7 +64,7 @@ export default function HomeScreen() {
               { 
                 width: imageSize, 
                 height: imageSize,
-                top: imageTop
+                top: imageTop,
               }
             ]}
           />
@@ -87,7 +85,7 @@ const styles = StyleSheet.create({
   outfitImage: {
     borderRadius: 10,
     borderWidth: 0,
-    borderColor: '#ddd',
+    objectFit:  'cover',
   },
   gradientBackground: {
     position: 'absolute',

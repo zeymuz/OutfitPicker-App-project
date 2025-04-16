@@ -49,7 +49,7 @@ export default function TabLayout() {
           headerShadowVisible: false,
           tabBarBackground: () => (
             <LinearGradient
-              colors={['#80CBC4', '#B2DFDB', '#E0F2F1']}
+              colors={['#000000', '#1E1E1E', '#121212']}
               start={{ x: 1, y: 0 }}
               end={{ x: 1, y: 1 }}
               locations={[0, 0.5, 1]}
@@ -69,13 +69,13 @@ export default function TabLayout() {
               <Ionicons 
                 name="shirt" 
                 size={24} 
-                color={focused ? 'blue' : '#888'} 
+                color={focused ? 'red' : 'darkred'} 
               />
             ),
             headerTitle: 'Outfit',
             headerBackground: () => (
               <LinearGradient
-                colors={['#E0F2F1', '#B2DFDB', '#80CBC4']}
+                colors={['#000000', '#1E1E1E', '#121212']}
                 start={{ x: 1, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 locations={[0, 0.5, 1]}
@@ -87,7 +87,7 @@ export default function TabLayout() {
               top: 1,
               fontSize: 70,
               textAlign: 'center',
-              color: '#424242',
+              color: 'white',
             },
           }}
         />
@@ -99,13 +99,13 @@ export default function TabLayout() {
               <Ionicons 
                 name="images" 
                 size={24} 
-                color={focused ? 'blue' : '#888'} 
+                color={focused ? 'red' : 'darkred'} 
               />
             ),
             headerTitle: 'Gallery',
             headerBackground: () => (
               <LinearGradient
-                colors={['#E0F2F1', '#B2DFDB', '#80CBC4']}
+                colors={['#000000', '#1E1E1E', '#121212']}
                 start={{ x: 1, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 locations={[0, 0.5, 1]}
@@ -114,7 +114,8 @@ export default function TabLayout() {
             ),
             headerTitleStyle: {
               fontFamily: 'StreetSoul',
-              fontSize: 50,
+              fontSize: 70,
+              color: 'white',
             },
           }}
         />
@@ -143,12 +144,12 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'blue',
+    backgroundColor: '#FF0000',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#FF0000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 10,
   },

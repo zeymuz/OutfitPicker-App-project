@@ -25,7 +25,7 @@ export default function Layout() {
   if (!fontsLoaded) return null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'white' }}>
+    <View style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
       <Slot />
     </View>
   );

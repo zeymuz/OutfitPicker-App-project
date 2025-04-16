@@ -46,6 +46,7 @@ function normalize(size: number) {
 
 const defaultImages = {
   fallback: require('../../assets/images/adaptive-icon.png'),
+  animePhoto: require('../../assets/images/animephoto.jpg'),
 };
 
 type Album = {
@@ -353,7 +354,7 @@ export default function GalleryScreen() {
       onLongPress={() => handleDeleteAlbum(name)}
     >
       <Image 
-        source={album.images?.[0] ? { uri: album.images[0] } : defaultImages.fallback}
+        source={album.images?.[0] ? { uri: album.images[0] } : defaultImages.animePhoto}
         style={styles.albumThumbnail}
         resizeMode="cover"
       />
@@ -379,7 +380,7 @@ export default function GalleryScreen() {
         style={styles.deleteImageButton}
         onPress={() => handleDeleteImage(item)}
       >
-        <Ionicons name="trash" size={normalize(16)} color="red" />
+        <Ionicons name="trash" size={normalize(16)} color="white" />
       </TouchableOpacity>
     </TouchableOpacity>
   ), [category, router, setItem, imageSize, handleDeleteImage]);
@@ -392,7 +393,7 @@ export default function GalleryScreen() {
         return (
           <View style={styles.emptyAlbum}>
             <Image 
-              source={defaultImages.fallback} 
+              source={defaultImages.animePhoto} 
               style={{ width: normalize(100), height: normalize(100), marginBottom: normalize(20) }}
             />
             <Text style={styles.emptyText}>No photos yet</Text>
@@ -428,7 +429,7 @@ export default function GalleryScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Image 
-              source={defaultImages.fallback} 
+              source={defaultImages.animePhoto} 
               style={{ width: normalize(100), height: normalize(100), marginBottom: normalize(20) }}
             />
             <Text style={styles.emptyText}>No Albums yet</Text>
@@ -439,7 +440,7 @@ export default function GalleryScreen() {
             style={styles.newAlbumButton}
             onPress={() => setIsModalVisible(true)}
           >
-            <Ionicons name="add-circle" size={normalize(24)} color="#007AFF" />
+            <Ionicons name="add-circle" size={normalize(24)} color="white" />
             <Text style={styles.newAlbumText}>Add New Album</Text>
           </TouchableOpacity>
         }
@@ -460,7 +461,7 @@ export default function GalleryScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={goBack}>
-          <Ionicons name="arrow-back" size={normalize(50)} color="#007AFF" />
+          <Ionicons name="arrow-back" size={normalize(50)} color="red" />
         </TouchableOpacity>
         <Text style={styles.title}>
           {currentAlbum ? currentAlbum : `${category.charAt(0).toUpperCase() + category.slice(1)} Albums`}
@@ -502,6 +503,7 @@ export default function GalleryScreen() {
               <Button 
                 title="Create" 
                 onPress={createAlbum} 
+                color="white"
                 disabled={!newAlbumName.trim()}
               />
             </View>
@@ -527,198 +529,210 @@ export default function GalleryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: normalize(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: 'white',
-    height: isSmallDevice ? normalize(60) : normalize(70),
-  },
-  title: {
-    fontSize: normalize(isSmallDevice ? 16 : 35),
-    
-    fontWeight: 'bold',
-  },
-  albumList: {
-    padding: normalize(isSmallDevice ? 10 : 15),
-  },
-  albumCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: normalize(isSmallDevice ? 10 : 15),
-    marginBottom: normalize(isSmallDevice ? 8 : 10),
-    backgroundColor: 'white',
-    borderRadius: normalize(10),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: normalize(2) },
-    shadowOpacity: 0.1,
-    shadowRadius: normalize(4),
-    elevation: 2,
-  },
-  albumThumbnail: {
-    width: normalize(isSmallDevice ? 50 : 60),
-    height: normalize(isSmallDevice ? 50 : 60),
-    borderRadius: normalize(8),
-    backgroundColor: '#eee',
-  },
-  albumInfo: {
-    flex: 1,
-    marginLeft: normalize(isSmallDevice ? 12 : 15),
-  },
-  albumName: {
-    fontSize: normalize(isSmallDevice ? 14 : 35),
-    fontWeight: '500',
-  },
-  albumCount: {
-    fontSize: normalize(isSmallDevice ? 12 : 21),
-    color: '#888',
-    marginTop: normalize(2),
-  },
-  imageGrid: {
-    padding: normalize(isSmallDevice ? 8 : 0),
-  },
-  imageItem: {
-    margin: normalize(isSmallDevice ? 3 : 5),
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    borderRadius: normalize(8),
-  },
-  deleteImageButton: {
-    position: 'absolute',
-    top: normalize(isSmallDevice ? 3 : 5),
-    right: normalize(isSmallDevice ? 3 : 5),
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: normalize(8),
-    padding: normalize(3),
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: normalize(isSmallDevice ? 30 : 40),
-  },
-  emptyListContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: normalize(isSmallDevice ? 14 : 25),
-    color: '#888',
-    marginBottom: normalize(isSmallDevice ? 15 : 20),
-  },
-  emptyAlbum: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: normalize(isSmallDevice ? 30 : 40),
-  },
-  newAlbumButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: normalize(isSmallDevice ? 15 : 20),
-    margin: normalize(isSmallDevice ? 70 : 70),
-    backgroundColor: 'white',
-    borderRadius: normalize(10),
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderStyle: 'dashed',
-  },
-  newAlbumText: {
-    marginLeft: normalize(isSmallDevice ? 8 : 10),
-    color: '#007AFF',
-    fontWeight: '500',
-    fontSize: normalize(isSmallDevice ? 14 : 25),
-  },
-  addPhotoButton: {
-    marginTop: normalize(isSmallDevice ? 15 : 20),
-    paddingVertical: normalize(isSmallDevice ? 8 : 10),
-    paddingHorizontal: normalize(isSmallDevice ? 25 : 30),
-    backgroundColor: '#007AFF',
-    borderRadius: normalize(8),
-  },
-  addPhotoText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: normalize(isSmallDevice ? 14 : 30),
-  },
-  fabContainer: {
-    position: 'absolute',
-    bottom: normalize(isSmallDevice ? 20 : 30),
-    right: normalize(isSmallDevice ? 20 : 30),
-  },
-  fab: {
-    width: normalize(isSmallDevice ? 50 : 60),
-    height: normalize(isSmallDevice ? 50 : 60),
-    borderRadius: normalize(25),
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-  },
-  fabSingle: {
-    backgroundColor: '#007AFF',
-  },
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: isSmallDevice ? '90%' : '80%',
-    backgroundColor: 'white',
-    borderRadius: normalize(10),
-    padding: normalize(isSmallDevice ? 15 : 20),
-  },
-  modalTitle: {
-    fontSize: normalize(isSmallDevice ? 16 : 30),
-    fontWeight: 'bold',
-    marginBottom: normalize(isSmallDevice ? 12 : 15),
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: normalize(8),
-    padding: normalize(isSmallDevice ? 8 : 10),
-    marginBottom: normalize(isSmallDevice ? 12 : 15),
-    fontSize: normalize(isSmallDevice ? 14 : 16),
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  processingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  processingText: {
-    marginTop: normalize(isSmallDevice ? 12 : 15),
-    color: 'white',
-    fontSize: normalize(isSmallDevice ? 14 : 16),
-  },
-  processingProgress: {
-    marginTop: normalize(5),
-    color: 'white',
-    fontSize: normalize(isSmallDevice ? 12 : 14),
-  },
-  categoryTitle: {
-    fontSize: normalize(isSmallDevice ? 18 : 27),
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    top: "50%",
-    bottom: "50%",
-  },
-});
+
+    container: {
+      flex: 1,
+      backgroundColor: '#121212', // Dark background
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: normalize(12),
+      borderBottomWidth: 1,
+      borderBottomColor: '#333',
+      backgroundColor: '#000000',
+      height: isSmallDevice ? normalize(60) : normalize(70),
+    },
+    title: {
+      fontSize: normalize(isSmallDevice ? 16 : 35),
+      fontWeight: 'bold',
+      color: '#FFFFFF',
+    },
+    albumList: {
+      padding: normalize(isSmallDevice ? 10 : 15),
+      backgroundColor: '#121212',
+    },
+    albumCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: normalize(isSmallDevice ? 10 : 15),
+      marginBottom: normalize(isSmallDevice ? 8 : 10),
+      backgroundColor: '#1E1E1E',
+      borderRadius: normalize(10),
+      shadowColor: '#FF0000',
+      shadowOffset: { width: 0, height: normalize(2) },
+      shadowOpacity: 0.2,
+      shadowRadius: normalize(4),
+      elevation: 2,
+    },
+    albumThumbnail: {
+      width: normalize(isSmallDevice ? 50 : 60),
+      height: normalize(isSmallDevice ? 50 : 60),
+      borderRadius: normalize(8),
+      backgroundColor: '#333',
+    },
+    albumInfo: {
+      flex: 1,
+      marginLeft: normalize(isSmallDevice ? 12 : 15),
+    },
+    albumName: {
+      fontSize: normalize(isSmallDevice ? 14 : 35),
+      fontWeight: '500',
+      color: '#FFFFFF',
+    },
+    albumCount: {
+      fontSize: normalize(isSmallDevice ? 12 : 21),
+      color: '#888',
+      marginTop: normalize(2),
+    },
+    imageGrid: {
+      padding: normalize(isSmallDevice ? 8 : 0),
+      backgroundColor: '#121212',
+    },
+    imageItem: {
+      margin: normalize(isSmallDevice ? 3 : 5),
+      backgroundColor: '#1E1E1E',
+      borderRadius: normalize(8),
+    },
+    image: {
+      width: '100%',
+      height: '100%',
+      borderRadius: normalize(8),
+    },
+    deleteImageButton: {
+      position: 'absolute',
+      top: normalize(isSmallDevice ? 3 : 5),
+      right: normalize(isSmallDevice ? 3 : 5),
+      backgroundColor: 'rgba(255,0,0,0.7)',
+      borderRadius: normalize(8),
+      padding: normalize(3),
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: normalize(isSmallDevice ? 30 : 40),
+      backgroundColor: '#121212',
+    },
+    emptyListContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#121212',
+    },
+    emptyText: {
+      fontSize: normalize(isSmallDevice ? 14 : 25),
+      color: '#888',
+      marginBottom: normalize(isSmallDevice ? 15 : 20),
+    },
+    emptyAlbum: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: normalize(isSmallDevice ? 30 : 40),
+      backgroundColor: '#121212',
+    },
+    newAlbumButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: normalize(isSmallDevice ? 15 : 20),
+      margin: normalize(isSmallDevice ? 70 : 70),
+      backgroundColor: '#1E1E1E',
+      borderRadius: normalize(10),
+      borderWidth: 1,
+      borderColor: '#FF0000',
+      borderStyle: 'dashed',
+    },
+    newAlbumText: {
+      marginLeft: normalize(isSmallDevice ? 8 : 10),
+      color: '#FF0000',
+      fontWeight: '500',
+      fontSize: normalize(isSmallDevice ? 14 : 25),
+    },
+    addPhotoButton: {
+      marginTop: normalize(isSmallDevice ? 15 : 20),
+      paddingVertical: normalize(isSmallDevice ? 8 : 10),
+      paddingHorizontal: normalize(isSmallDevice ? 25 : 30),
+      backgroundColor: '#FF0000',
+      borderRadius: normalize(8),
+    },
+    addPhotoText: {
+      color: 'white',
+      fontWeight: 'bold',
+      fontSize: normalize(isSmallDevice ? 14 : 30),
+    },
+    fabContainer: {
+      position: 'absolute',
+      bottom: normalize(isSmallDevice ? 20 : 30),
+      right: normalize(isSmallDevice ? 20 : 30),
+    },
+    fab: {
+      width: normalize(isSmallDevice ? 50 : 60),
+      height: normalize(isSmallDevice ? 50 : 60),
+      borderRadius: normalize(25),
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 5,
+    },
+    fabSingle: {
+      backgroundColor: '#FF0000',
+    },
+    modalOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      width: isSmallDevice ? '90%' : '80%',
+      backgroundColor: '#1E1E1E',
+      borderRadius: normalize(10),
+      padding: normalize(isSmallDevice ? 15 : 20),
+    },
+    modalTitle: {
+      fontSize: normalize(isSmallDevice ? 16 : 30),
+      fontWeight: 'bold',
+      marginBottom: normalize(isSmallDevice ? 12 : 15),
+      color: '#FFFFFF',
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: '#333',
+      borderRadius: normalize(8),
+      padding: normalize(isSmallDevice ? 8 : 10),
+      marginBottom: normalize(isSmallDevice ? 12 : 15),
+      fontSize: normalize(isSmallDevice ? 14 : 16),
+      color: '#FFFFFF',
+      backgroundColor: '#333',
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    processingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.9)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    processingText: {
+      marginTop: normalize(isSmallDevice ? 12 : 15),
+      color: '#FFFFFF',
+      fontSize: normalize(isSmallDevice ? 14 : 16),
+    },
+    processingProgress: {
+      marginTop: normalize(5),
+      color: '#FF0000',
+      fontSize: normalize(isSmallDevice ? 12 : 14),
+    },
+    categoryTitle: {
+      fontSize: normalize(isSmallDevice ? 18 : 27),
+      fontWeight: 'bold',
+      color: '#FFFFFF',
+      textAlign: 'center',
+      top: "50%",
+      bottom: "50%",
+    },
+  });
