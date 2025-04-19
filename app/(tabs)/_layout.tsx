@@ -57,7 +57,7 @@ export default function TabLayout() {
             />
           ),
           tabBarStyle: {
-            height: 80,
+            height: 60, // Reduced from 80 to make space for button
             borderTopWidth: 0,
           },
         }}
@@ -119,6 +119,34 @@ export default function TabLayout() {
             },
           }}
         />
+
+        <Tabs.Screen
+          name="premium"
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <Ionicons 
+                name="diamond" 
+                size={24} 
+                color={focused ? 'red' : 'darkred'} 
+              />
+            ),
+            headerTitle: 'Premium',
+            headerBackground: () => (
+              <LinearGradient
+                colors={['#000000', '#1E1E1E', '#121212']}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                locations={[0, 0.5, 1]}
+                style={StyleSheet.absoluteFill}
+              />
+            ),
+            headerTitleStyle: {
+              fontFamily: 'StreetSoul',
+              fontSize: 70,
+              color: 'white',
+            },
+          }}
+        />
       </Tabs>
 
       <View style={styles.buttonContainer}>
@@ -136,7 +164,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     position: 'absolute',
     left: '50%',
-    bottom: 40,
+    bottom: 30, // Adjusted from 40 to account for smaller tab bar
     marginLeft: -35,
     zIndex: 100,
   },

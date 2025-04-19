@@ -18,11 +18,11 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useOutfitStore } from '../hooks/useOutfitStore';
 import { useAlbumStorage } from '../hooks/useAlbumStorage';
+import { usePremium } from '../hooks/usePremium';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { imageService } from '../services/imageService';
 import CustomText from '../../components/CustomText';
-
 
 // Responsive scaling setup
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -67,6 +67,7 @@ export default function GalleryScreen() {
     
   const setItem = useOutfitStore((state) => state.setItem);
   const router = useRouter();
+  const { isPremium } = usePremium();
   
   const {
     albums,
@@ -109,6 +110,23 @@ export default function GalleryScreen() {
           let processedUri = uri;
           
           if (removeBackground) {
+            // Check background removal limit for non-premium users
+            if (!isPremium && albums[currentAlbum]?.images?.filter(img => img.includes('bgremoved_')).length >= 1) {
+              Alert.alert(
+                "Background Removal Limit",
+                "Free users can only have 1 background removed image per album. Upgrade to Premium for unlimited removals.",
+                [
+                  { text: "Keep Original", onPress: () => {} },
+                  { 
+                    text: "Upgrade", 
+                    onPress: () => router.push('/premium') 
+                  }
+                ]
+              );
+              processedUris.push(uri);
+              continue;
+            }
+            
             const result = await imageService.processImage(uri);
             processedUri = result.processed;
           }
@@ -131,10 +149,42 @@ export default function GalleryScreen() {
       setProcessingProgress(0);
       setProcessingTotal(0);
     }
-  }, [currentAlbum, addMultipleImagesToAlbum]);
+  }, [currentAlbum, addMultipleImagesToAlbum, isPremium, albums, router]);
 
   const handleImageSelection = useCallback(async (albumName: string) => {
     if (!albumName || !category) return;
+
+    // Check album limit for non-premium users
+    if (!isPremium && Object.keys(albums).length >= 1 && !albums[albumName]) {
+      Alert.alert(
+        "Album Limit Reached",
+        "Free users can only have one album. Upgrade to Premium for unlimited albums.",
+        [
+          { text: "Later" },
+          { 
+            text: "Upgrade", 
+            onPress: () => router.push('/premium') 
+          }
+        ]
+      );
+      return;
+    }
+
+    // Check image limit for non-premium users
+    if (!isPremium && albums[albumName]?.images?.length >= 5) {
+      Alert.alert(
+        "Photo Limit Reached",
+        "Free users can only add 5 photos per album (4 original + 1 background removed). Upgrade to Premium for unlimited photos.",
+        [
+          { text: "Later" },
+          { 
+            text: "Upgrade", 
+            onPress: () => router.push('/premium') 
+          }
+        ]
+      );
+      return;
+    }
 
     Alert.alert(
       "Add Photos",
@@ -173,6 +223,22 @@ export default function GalleryScreen() {
                   {
                     text: "Remove Background",
                     onPress: async () => {
+                      // Check background removal limit for non-premium users
+                      if (!isPremium && albums[albumName]?.images?.filter(img => img.includes('bgremoved_')).length >= 1) {
+                        Alert.alert(
+                          "Background Removal Limit",
+                          "Free users can only have 1 background removed image per album. Upgrade to Premium for unlimited removals.",
+                          [
+                            { text: "Keep Original", onPress: () => {} },
+                            { 
+                              text: "Upgrade", 
+                              onPress: () => router.push('/premium') 
+                            }
+                          ]
+                        );
+                        return;
+                      }
+
                       setIsProcessing(true);
                       try {
                         const processingResult = await imageService.processImage(imageUri);
@@ -256,6 +322,22 @@ export default function GalleryScreen() {
                 {
                   text: "Remove Background",
                   onPress: async () => {
+                    // Check background removal limit for non-premium users
+                    if (!isPremium && albums[albumName]?.images?.filter(img => img.includes('bgremoved_')).length >= 1) {
+                      Alert.alert(
+                        "Background Removal Limit",
+                        "Free users can only have 1 background removed image per album. Upgrade to Premium for unlimited removals.",
+                        [
+                          { text: "Keep Original", onPress: () => {} },
+                          { 
+                            text: "Upgrade", 
+                            onPress: () => router.push('/premium') 
+                          }
+                        ]
+                      );
+                      return;
+                    }
+
                     setIsProcessing(true);
                     try {
                       const processingResult = await imageService.processImage(imageUri);
@@ -282,7 +364,7 @@ export default function GalleryScreen() {
         }
       ]
     );
-  }, [category, addImageToAlbum, processMultipleImages]);
+  }, [category, addImageToAlbum, processMultipleImages, isPremium, albums, router]);
 
   const createAlbum = useCallback(async () => {
     if (!newAlbumName.trim() || !category) {
@@ -295,11 +377,28 @@ export default function GalleryScreen() {
       return;
     }
 
+    // Check album limit for non-premium users
+    if (!isPremium && Object.keys(albums).length >= 1) {
+      Alert.alert(
+        "Album Limit Reached",
+        "Free users can only have one album. Upgrade to Premium for unlimited albums.",
+        [
+          { text: "Later" },
+          { 
+            text: "Upgrade", 
+            onPress: () => router.push('/premium') 
+          }
+        ]
+      );
+      return;
+    }
+
     await createNewAlbum(newAlbumName);
     setNewAlbumName('');
     setIsModalVisible(false);
-  }, [newAlbumName, albums, createNewAlbum, category]);
+  }, [newAlbumName, albums, createNewAlbum, category, isPremium, router]);
 
+  // [Rest of your existing code remains exactly the same...]
   const handleDeleteAlbum = useCallback(async (name: string) => {
     Alert.alert(
       'Delete Collection',
@@ -529,7 +628,6 @@ export default function GalleryScreen() {
 }
 
 const styles = StyleSheet.create({
-
     container: {
       flex: 1,
       backgroundColor: '#121212', // Dark background
