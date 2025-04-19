@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePremium } from '../hooks/usePremium';
 import { useRouter } from 'expo-router';
@@ -7,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 export default function PremiumScreen() {
   const { isPremium, unlockPremium, lockPremium } = usePremium();
   const router = useRouter();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const features = [
     "Unlimited albums",
@@ -16,15 +18,22 @@ export default function PremiumScreen() {
   ];
 
   const handlePurchase = async () => {
-    // In a real app, you would implement actual payment processing here
-    // For testing, we'll just unlock premium immediately
-    await unlockPremium();
-    Alert.alert("Premium Unlocked", "Thank you for going premium!");
+    // Simulate 3 second "processing" delay
+    setIsProcessing(true); 
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // 30% chance to show "payment failed"
+    if (Math.random() < 0.3) {
+      Alert.alert("Payment Failed", "Simulated payment error");
+    } else {
+      await unlockPremium();
+      Alert.alert("Success", "Premium unlocked (simulated)");
+    }
+    setIsProcessing(false);
   };
 
   const handleRestore = async () => {
-    // In a real app, you would implement purchase restoration here
-    Alert.alert("Restore Purchase", "This would restore purchases in a real app");
+    Alert.alert("Restore Purchase", "In a real app, this would restore purchases");
   };
 
   return (
@@ -51,10 +60,15 @@ export default function PremiumScreen() {
         {!isPremium ? (
           <>
             <TouchableOpacity 
-              style={styles.purchaseButton}
+              style={[styles.purchaseButton, isProcessing && styles.disabledButton]}
               onPress={handlePurchase}
+              disabled={isProcessing}
             >
-              <Text style={styles.purchaseButtonText}>UNLOCK PREMIUM - $4.99</Text>
+              {isProcessing ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.purchaseButtonText}>UNLOCK PREMIUM - $4.99</Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -139,6 +153,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 30,
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   purchaseButtonText: {
     color: 'white',
