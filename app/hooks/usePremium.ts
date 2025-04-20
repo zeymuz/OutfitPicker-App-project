@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 
 // Simple global state management
 let globalPremium = false;
-const listeners = new Set<() => void>();
+const listeners = new Set<() => void>(); // ← Change to void return type
 
 const notifyListeners = () => {
   listeners.forEach(listener => listener());
@@ -13,9 +13,14 @@ export const usePremium = () => {
   const [isPremium, setIsPremium] = useState(globalPremium);
 
   useEffect(() => {
-    const listener = () => setIsPremium(globalPremium);
+    const listener = () => {
+      setIsPremium(globalPremium); 
+      return undefined; // ← Explicitly return undefined
+    };
     listeners.add(listener);
-    return () => listeners.delete(listener);
+    return () => {
+      listeners.delete(listener);
+    };
   }, []);
 
   const setPremiumStatus = async (status: boolean) => {

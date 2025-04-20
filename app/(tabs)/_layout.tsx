@@ -39,7 +39,7 @@ export default function TabLayout() {
           outputRange: ['0deg', '-5deg', '3deg', '-3deg', '2deg', '0deg']
         })
       }
-    ]
+    ] as const
   };
 
   return (
