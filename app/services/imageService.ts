@@ -20,7 +20,16 @@ export const imageService = {
       const prepared = await this.prepareImage(originalUri);
       const result = await this.removeBackgroundAPI4AI(prepared.uri);
       
-      if (!result.success) throw new Error(result.error || 'Background removal failed');
+      // Silent handling of quota errors
+      if (!result.success) {
+        return {
+          original: originalUri,
+          processed: originalUri, // Return original image silently
+          wasResized: prepared.wasResized,
+          width: prepared.width,
+          height: prepared.height
+        };
+      }
       
       return {
         original: originalUri,
@@ -30,11 +39,11 @@ export const imageService = {
         height: prepared.height
       };
     } catch (error) {
-      console.error('Process error:', error);
+      // Silent error handling
       return {
         original: originalUri,
         processed: originalUri,
-        error: error instanceof Error ? error.message : String(error)
+        error: null // No error message
       };
     }
   },
@@ -97,7 +106,6 @@ export const imageService = {
         type: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`
       } as any);
 
-      console.log('Sending request to API4AI...');
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -109,16 +117,24 @@ export const imageService = {
       });
       clearTimeout(timeout);
 
-      console.log('Received response status:', response.status);
       const result = await response.json();
-      console.log('API Response Structure:', Object.keys(result));
 
-      // Enhanced response parsing with multiple fallbacks
+      // Silent handling of quota errors
+      if (result.message && /quota|exceeded|limit/i.test(result.message)) {
+        return {
+          success: false,
+          error: null, // No error message
+          quotaExceeded: true
+        };
+      }
+
       const base64Image = this.extractImageFromResponse(result);
       
       if (!base64Image) {
-        console.error('No image found in response. Full response:', JSON.stringify(result, null, 2));
-        throw new Error('API response did not contain valid image data');
+        return {
+          success: false,
+          error: null // No error message
+        };
       }
 
       const outputUri = `${getCacheDirectory()}bgremoved_${Date.now()}.png`;
@@ -128,21 +144,19 @@ export const imageService = {
       
     } catch (error) {
       clearTimeout(timeout);
-      console.error('API4AI Error Details:', error);
       return { 
         success: false,
-        error: 'Background removal failed. ' + (error instanceof Error ? error.message : 'Please try again.')
+        error: null // No error message
       };
     }
   },
 
   extractImageFromResponse(response: any): string | null {
-    // Check all possible paths where the image might be
     const possiblePaths = [
-      response?.results?.[0]?.entities?.[0]?.image, // Primary path
-      response?.results?.[0]?.image,                // Alternative path 1
-      response?.image,                              // Alternative path 2
-      this.deepScanForImage(response)               // Deep scan as fallback
+      response?.results?.[0]?.entities?.[0]?.image,
+      response?.results?.[0]?.image,
+      response?.image,
+      this.deepScanForImage(response)
     ];
 
     for (const imageData of possiblePaths) {
@@ -157,7 +171,7 @@ export const imageService = {
     if (typeof obj === 'string') {
       if (obj.startsWith('data:image')) return obj;
       if (obj.length > 1000 && /^[A-Za-z0-9+/=]+$/.test(obj)) {
-        return obj; // Raw base64 without prefix
+        return obj;
       }
     }
     

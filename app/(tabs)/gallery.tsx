@@ -22,6 +22,7 @@ import { usePremium } from '../hooks/usePremium';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { imageService } from '../services/imageService';
+import { Linking } from 'react-native';
 
 
 // Responsive scaling setup
@@ -185,103 +186,108 @@ export default function GalleryScreen() {
     }
 
     const showImagePicker = async () => {
-      try {
-        console.log("Current premium status:", isPremium);
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: false,
-          aspect: undefined,
-          quality: 0.8,
-          allowsMultipleSelection: isPremium // Use real-time premium status
-        });
-  
-        if (result.canceled || !result.assets) return;
+  try {
+    console.log("Current premium status:", isPremium);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      aspect: undefined,
+      quality: 0.8,
+      allowsMultipleSelection: isPremium
+    });
 
-        if (isPremium && result.assets.length > 1) {
-          Alert.alert(
-            `Add ${result.assets.length} Photos`,
-            "Would you like to remove backgrounds from all photos?",
-            [
-              {
-                text: "Cancel",
-                style: "cancel"
-              },
-              {
-                text: "Keep Originals",
-                onPress: async () => {
-                  const uris = result.assets.map(asset => asset.uri);
-                  await processMultipleImages(uris, false);
-                }
-              },
-              {
-                text: "Remove Backgrounds",
-                onPress: async () => {
-                  const uris = result.assets.map(asset => asset.uri);
-                  await processMultipleImages(uris, true);
-                }
-              }
-            ]
-          );
-          return;
-        }
+    if (result.canceled || !result.assets) return;
 
-        const imageUri = result.assets[0].uri;
-        Alert.alert(
-          "Add Photo",
-          "Would you like to remove the background from this photo?",
-          [
-            {
-              text: "Keep Original",
-              onPress: async () => {
-                try {
-                  await addImageToAlbum(albumName, imageUri);
-                } catch (error) {
-                  console.error('Failed to add image:', error);
-                  Alert.alert('Error', 'Failed to add photo to collection');
-                }
-              }
-            },
-            {
-              text: "Remove Background",
-              onPress: async () => {
-                if (!isPremium && albums[albumName]?.images?.filter(img => img.includes('bgremoved_')).length >= 1) {
-                  Alert.alert(
-                    "Background Removal Limit",
-                    "Free users can only have 1 background removed image per album. Upgrade to Premium for unlimited removals.",
-                    [
-                      { text: "Keep Original", onPress: () => {} },
-                      { 
-                        text: "Upgrade", 
-                        onPress: () => router.push('/premium') 
-                      }
-                    ]
-                  );
-                  return;
-                }
-
-                setIsProcessing(true);
-                try {
-                  const processingResult = await imageService.processImage(imageUri);
-                  await addImageToAlbum(albumName, processingResult.processed);
-                } catch (error) {
-                  console.error('Background removal failed:', error);
-                  Alert.alert('Error', 'Failed to process photo');
-                } finally {
-                  setIsProcessing(false);
-                }
-              }
-            },
-            {
-              text: "Cancel",
-              style: "cancel"
+    if (isPremium && result.assets.length > 1) {
+      Alert.alert(
+        `Add ${result.assets.length} Photos`,
+        "Would you like to remove backgrounds from all photos?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel"
+          },
+          {
+            text: "Keep Originals",
+            onPress: async () => {
+              const uris = result.assets.map(asset => asset.uri);
+              await processMultipleImages(uris, false);
             }
-          ]
-        );
-      } catch (error) {
-        console.error("Image picker error:", error);
-        Alert.alert("Error", "Failed to select images");
-      }
-    };
+          },
+          {
+            text: "Remove Backgrounds",
+            onPress: async () => {
+              const uris = result.assets.map(asset => asset.uri);
+              await processMultipleImages(uris, true);
+            }
+          }
+        ]
+      );
+      return;
+    }
+
+    const imageUri = result.assets[0].uri;
+    Alert.alert(
+      "Add Photo",
+      "Would you like to remove the background from this photo?",
+      [
+        {
+          text: "Keep Original",
+          onPress: async () => {
+            try {
+              await addImageToAlbum(albumName, imageUri);
+            } catch (error) {
+              console.error('Failed to add image:', error);
+              Alert.alert('Error', 'Failed to add photo to collection');
+            }
+          }
+        },
+        
+        {
+          text: "Remove Background",
+          onPress: async () => {
+            if (!isPremium && albums[albumName]?.images?.filter(img => img.includes('bgremoved_')).length >= 1) {
+              Alert.alert(
+                "Background Removal Limit",
+                "Free users can only have 1 background removed image per album. Upgrade to Premium for unlimited removals.",
+                [
+                  { text: "Keep Original", onPress: () => {} },
+                  { 
+                    text: "Upgrade", 
+                    onPress: () => router.push('/premium') 
+                  }
+                ]
+              );
+              return;
+            }
+        
+            setIsProcessing(true);
+            try {
+              const { processed, error } = await imageService.processImage(imageUri);
+              
+              // If there was an error (including quota exceeded), just use original image
+              const imageToAdd = error ? imageUri : processed;
+              
+              await addImageToAlbum(albumName, imageToAdd);
+            } catch (error) {
+              // Fall back to original image on any error
+              await addImageToAlbum(albumName, imageUri);
+            } finally {
+              setIsProcessing(false);
+            }
+          }
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    );
+  } catch (error) {
+    console.error("Image picker error:", error);
+    Alert.alert("Error", "Failed to select images");
+  }
+};
 
     const showCameraPicker = async () => {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
