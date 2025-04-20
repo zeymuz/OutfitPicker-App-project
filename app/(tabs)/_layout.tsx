@@ -45,7 +45,7 @@ export default function TabLayout() {
     <View style={{ flex: 1 }}>
       <Tabs 
         screenOptions={{
-          tabBarShowLabel: false,
+          tabBarShowLabel: true, // Show labels like Spotify
           headerShadowVisible: false,
           tabBarBackground: () => (
             <LinearGradient
@@ -57,21 +57,36 @@ export default function TabLayout() {
             />
           ),
           tabBarStyle: {
-            height: 60, // Reduced from 80 to make space for button
+            height: 80, // Taller tab bar like Spotify
             borderTopWidth: 0,
+            paddingTop: 8, // Add padding for icon + label
           },
+          tabBarItemStyle: {
+            paddingBottom: 8, // Space between icon and label
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: '600',
+            marginTop: 4, // Space between icon and label
+          },
+          tabBarActiveTintColor: 'red',
+          tabBarInactiveTintColor: 'grey',
         }}
       >
         <Tabs.Screen
           name="index"
           options={{
             tabBarIcon: ({ focused }) => (
-              <Ionicons 
-                name="shirt" 
-                size={24} 
-                color={focused ? 'red' : 'darkred'} 
-              />
+              <View style={styles.iconContainer}>
+                <Ionicons 
+                  name="shirt" 
+                  size={26} 
+                  color={focused ? 'red' : 'grey'} 
+                  style={focused ? styles.iconGlow : styles.iconOutline}
+                />
+              </View>
             ),
+            tabBarLabel: 'Outfit',
             headerTitle: 'Outfit',
             headerBackground: () => (
               <LinearGradient
@@ -96,12 +111,16 @@ export default function TabLayout() {
           name="gallery"
           options={{
             tabBarIcon: ({ focused }) => (
-              <Ionicons 
-                name="images" 
-                size={24} 
-                color={focused ? 'red' : 'darkred'} 
-              />
+              <View style={styles.iconContainer}>
+                <Ionicons 
+                  name="images" 
+                  size={26} 
+                  color={focused ? 'red' : 'grey'} 
+                  style={focused ? styles.iconGlow : styles.iconOutline}
+                />
+              </View>
             ),
+            tabBarLabel: 'Gallery',
             headerTitle: 'Gallery',
             headerBackground: () => (
               <LinearGradient
@@ -124,13 +143,49 @@ export default function TabLayout() {
           name="premium"
           options={{
             tabBarIcon: ({ focused }) => (
-              <Ionicons 
-                name="diamond" 
-                size={24} 
-                color={focused ? 'red' : 'darkred'} 
+              <View style={styles.iconContainer}>
+                <Ionicons 
+                  name="diamond" 
+                  size={26} 
+                  color={focused ? 'red' : 'grey'} 
+                  style={focused ? styles.iconGlow : styles.iconOutline}
+                />
+              </View>
+            ),
+            tabBarLabel: 'Premium',
+            headerTitle: 'Premium',
+            headerBackground: () => (
+              <LinearGradient
+                colors={['#000000', '#1E1E1E', '#121212']}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                locations={[0, 0.5, 1]}
+                style={StyleSheet.absoluteFill}
               />
             ),
-            headerTitle: 'Premium',
+            headerTitleStyle: {
+              fontFamily: 'StreetSoul',
+              fontSize: 70,
+              color: 'white',
+            },
+          }}
+        />
+
+        <Tabs.Screen
+          name="settings"
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <View style={styles.iconContainer}>
+                <Ionicons 
+                  name="settings" 
+                  size={26} 
+                  color={focused ? 'red' : 'grey'} 
+                  style={focused ? styles.iconGlow : styles.iconOutline}
+                />
+              </View>
+            ),
+            tabBarLabel: 'Settings',
+            headerTitle: 'Settings',
             headerBackground: () => (
               <LinearGradient
                 colors={['#000000', '#1E1E1E', '#121212']}
@@ -164,7 +219,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     position: 'absolute',
     left: '50%',
-    bottom: 30, // Adjusted from 40 to account for smaller tab bar
+    bottom: 40, // Adjusted for taller tab bar
     marginLeft: -35,
     zIndex: 100,
   },
@@ -180,5 +235,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 10,
+  },
+  iconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 30, // Fixed height for consistent icon alignment
+  },
+  iconOutline: {
+    opacity: 0.8,
+  },
+  iconGlow: {
+    textShadowColor: 'rgba(255, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
 });

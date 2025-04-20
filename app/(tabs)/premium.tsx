@@ -18,18 +18,17 @@ export default function PremiumScreen() {
   ];
 
   const handlePurchase = async () => {
-    // Simulate 3 second "processing" delay
-    setIsProcessing(true); 
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // 30% chance to show "payment failed"
-    if (Math.random() < 0.3) {
-      Alert.alert("Payment Failed", "Simulated payment error");
-    } else {
+    setIsProcessing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate payment
       await unlockPremium();
-      Alert.alert("Success", "Premium unlocked (simulated)");
+      console.log("Premium status immediately after unlock:", isPremium);
+      Alert.alert("Success", "Premium features are now available!");
+    } catch (error) {
+      Alert.alert("Error", "Purchase failed");
+    } finally {
+      setIsProcessing(false);
     }
-    setIsProcessing(false);
   };
 
   const handleRestore = async () => {

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useReducer } from 'react';
 import { 
   View, 
   Text, 
@@ -22,15 +22,14 @@ import { usePremium } from '../hooks/usePremium';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { imageService } from '../services/imageService';
-import CustomText from '../../components/CustomText';
+
 
 // Responsive scaling setup
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const isSmallDevice = SCREEN_HEIGHT < 700; // iPhone SE height is 667
-const BASE_WIDTH = 428; // iPhone 14 Plus width
-const BASE_HEIGHT = 926; // iPhone 14 Plus height
 
-// Calculate scale based on both width and height
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const isSmallDevice = SCREEN_HEIGHT < 700;
+const BASE_WIDTH = 428;
+const BASE_HEIGHT = 926;
 const widthScale = SCREEN_WIDTH / BASE_WIDTH;
 const heightScale = SCREEN_HEIGHT / BASE_HEIGHT;
 const scale = Math.min(widthScale, heightScale) * (isSmallDevice ? 0.9 : 1);
@@ -68,6 +67,7 @@ export default function GalleryScreen() {
   const setItem = useOutfitStore((state) => state.setItem);
   const router = useRouter();
   const { isPremium } = usePremium();
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
   
   const {
     albums,
@@ -88,6 +88,7 @@ export default function GalleryScreen() {
   const [processingTotal, setProcessingTotal] = useState(0);
 
   const imageSize = (SCREEN_WIDTH / IMAGE_GRID_COLUMNS) - normalize(10);
+
 
   const goBack = useCallback(() => {
     if (currentAlbum) {
@@ -110,7 +111,6 @@ export default function GalleryScreen() {
           let processedUri = uri;
           
           if (removeBackground) {
-            // Check background removal limit for non-premium users
             if (!isPremium && albums[currentAlbum]?.images?.filter(img => img.includes('bgremoved_')).length >= 1) {
               Alert.alert(
                 "Background Removal Limit",
@@ -154,7 +154,6 @@ export default function GalleryScreen() {
   const handleImageSelection = useCallback(async (albumName: string) => {
     if (!albumName || !category) return;
 
-    // Check album limit for non-premium users
     if (!isPremium && Object.keys(albums).length >= 1 && !albums[albumName]) {
       Alert.alert(
         "Album Limit Reached",
@@ -170,7 +169,6 @@ export default function GalleryScreen() {
       return;
     }
 
-    // Check image limit for non-premium users
     if (!isPremium && albums[albumName]?.images?.length >= 5) {
       Alert.alert(
         "Photo Limit Reached",
@@ -186,185 +184,198 @@ export default function GalleryScreen() {
       return;
     }
 
+    const showImagePicker = async () => {
+      try {
+        console.log("Current premium status:", isPremium);
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          aspect: undefined,
+          quality: 0.8,
+          allowsMultipleSelection: isPremium // Use real-time premium status
+        });
+  
+        if (result.canceled || !result.assets) return;
+
+        if (isPremium && result.assets.length > 1) {
+          Alert.alert(
+            `Add ${result.assets.length} Photos`,
+            "Would you like to remove backgrounds from all photos?",
+            [
+              {
+                text: "Cancel",
+                style: "cancel"
+              },
+              {
+                text: "Keep Originals",
+                onPress: async () => {
+                  const uris = result.assets.map(asset => asset.uri);
+                  await processMultipleImages(uris, false);
+                }
+              },
+              {
+                text: "Remove Backgrounds",
+                onPress: async () => {
+                  const uris = result.assets.map(asset => asset.uri);
+                  await processMultipleImages(uris, true);
+                }
+              }
+            ]
+          );
+          return;
+        }
+
+        const imageUri = result.assets[0].uri;
+        Alert.alert(
+          "Add Photo",
+          "Would you like to remove the background from this photo?",
+          [
+            {
+              text: "Keep Original",
+              onPress: async () => {
+                try {
+                  await addImageToAlbum(albumName, imageUri);
+                } catch (error) {
+                  console.error('Failed to add image:', error);
+                  Alert.alert('Error', 'Failed to add photo to collection');
+                }
+              }
+            },
+            {
+              text: "Remove Background",
+              onPress: async () => {
+                if (!isPremium && albums[albumName]?.images?.filter(img => img.includes('bgremoved_')).length >= 1) {
+                  Alert.alert(
+                    "Background Removal Limit",
+                    "Free users can only have 1 background removed image per album. Upgrade to Premium for unlimited removals.",
+                    [
+                      { text: "Keep Original", onPress: () => {} },
+                      { 
+                        text: "Upgrade", 
+                        onPress: () => router.push('/premium') 
+                      }
+                    ]
+                  );
+                  return;
+                }
+
+                setIsProcessing(true);
+                try {
+                  const processingResult = await imageService.processImage(imageUri);
+                  await addImageToAlbum(albumName, processingResult.processed);
+                } catch (error) {
+                  console.error('Background removal failed:', error);
+                  Alert.alert('Error', 'Failed to process photo');
+                } finally {
+                  setIsProcessing(false);
+                }
+              }
+            },
+            {
+              text: "Cancel",
+              style: "cancel"
+            }
+          ]
+        );
+      } catch (error) {
+        console.error("Image picker error:", error);
+        Alert.alert("Error", "Failed to select images");
+      }
+    };
+
+    const showCameraPicker = async () => {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Camera access is needed to take photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        aspect: undefined,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+      const imageUri = result.assets[0].uri;
+      Alert.alert(
+        "Add Photo",
+        "Would you like to remove the background from this photo?",
+        [
+          {
+            text: "Keep Original",
+            onPress: async () => {
+              try {
+                await addImageToAlbum(albumName, imageUri);
+              } catch (error) {
+                console.error('Failed to add image:', error);
+                Alert.alert('Error', 'Failed to add photo to collection');
+              }
+            }
+          },
+          {
+            text: "Remove Background",
+            onPress: async () => {
+              if (!isPremium && albums[albumName]?.images?.filter(img => img.includes('bgremoved_')).length >= 1) {
+                Alert.alert(
+                  "Background Removal Limit",
+                  "Free users can only have 1 background removed image per album. Upgrade to Premium for unlimited removals.",
+                  [
+                    { text: "Keep Original", onPress: () => {} },
+                    { 
+                      text: "Upgrade", 
+                      onPress: () => router.push('/premium') 
+                    }
+                  ]
+                );
+                return;
+              }
+
+              setIsProcessing(true);
+              try {
+                const processingResult = await imageService.processImage(imageUri);
+                await addImageToAlbum(albumName, processingResult.processed);
+              } catch (error) {
+                console.error('Background removal failed:', error);
+                Alert.alert('Error', 'Failed to process photo');
+              } finally {
+                setIsProcessing(false);
+              }
+            }
+          },
+          {
+            text: "Cancel",
+            style: "cancel"
+          }
+        ]
+      );
+    };
+
     Alert.alert(
-      "Add Photos",
-      "How would you like to add photos?",
+      isPremium ? "Add Photos" : "Add Photo",
+      isPremium ? "Select photos from:" : "Select photo from:",
       [
         {
-          text: "Choose from Gallery",
-          onPress: async () => {
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: false,
-              aspect: undefined,
-              quality: 0.8,
-              allowsMultipleSelection: true,
-            });
-
-            if (result.canceled || !result.assets || result.assets.length === 0) return;
-
-            if (result.assets.length === 1) {
-              const imageUri = result.assets[0].uri;
-              Alert.alert(
-                "Add Photo",
-                "Would you like to remove the background from this photo?",
-                [
-                  {
-                    text: "Keep Original",
-                    onPress: async () => {
-                      try {
-                        await addImageToAlbum(albumName, imageUri);
-                      } catch (error) {
-                        console.error('Failed to add image:', error);
-                        Alert.alert('Error', 'Failed to add photo to collection');
-                      }
-                    }
-                  },
-                  {
-                    text: "Remove Background",
-                    onPress: async () => {
-                      // Check background removal limit for non-premium users
-                      if (!isPremium && albums[albumName]?.images?.filter(img => img.includes('bgremoved_')).length >= 1) {
-                        Alert.alert(
-                          "Background Removal Limit",
-                          "Free users can only have 1 background removed image per album. Upgrade to Premium for unlimited removals.",
-                          [
-                            { text: "Keep Original", onPress: () => {} },
-                            { 
-                              text: "Upgrade", 
-                              onPress: () => router.push('/premium') 
-                            }
-                          ]
-                        );
-                        return;
-                      }
-
-                      setIsProcessing(true);
-                      try {
-                        const processingResult = await imageService.processImage(imageUri);
-                        await addImageToAlbum(albumName, processingResult.processed);
-                      } catch (error) {
-                        console.error('Background removal failed:', error);
-                        Alert.alert('Error', 'Failed to process photo');
-                      } finally {
-                        setIsProcessing(false);
-                      }
-                    }
-                  },
-                  {
-                    text: "Cancel",
-                    style: "cancel"
-                  }
-                ]
-              );
-            } else {
-              Alert.alert(
-                "Add Multiple Photos",
-                `Would you like to remove backgrounds from all ${result.assets.length} photos?`,
-                [
-                  {
-                    text: "Cancel",
-                    style: "cancel"
-                  },
-                  {
-                    text: "Keep All Originals",
-                    onPress: async () => {
-                      const uris = result.assets.map(asset => asset.uri);
-                      await processMultipleImages(uris, false);
-                    }
-                  },
-                  {
-                    text: "Remove All Backgrounds",
-                    onPress: async () => {
-                      const uris = result.assets.map(asset => asset.uri);
-                      await processMultipleImages(uris, true);
-                    }
-                  }
-                ]
-              );
-            }
-          }
+          text: "Gallery",
+          onPress: showImagePicker
         },
         {
-          text: "Take a Photo",
-          onPress: async () => {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== 'granted') {
-              Alert.alert('Permission required', 'Camera access is needed to take photos');
-              return;
-            }
-
-            const result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: false,
-              aspect: undefined,
-              quality: 0.8,
-            });
-
-            if (result.canceled || !result.assets || result.assets.length === 0) return;
-
-            const imageUri = result.assets[0].uri;
-            Alert.alert(
-              "Add Photo",
-              "Would you like to remove the background from this photo?",
-              [
-                {
-                  text: "Keep Original",
-                  onPress: async () => {
-                    try {
-                      await addImageToAlbum(albumName, imageUri);
-                    } catch (error) {
-                      console.error('Failed to add image:', error);
-                      Alert.alert('Error', 'Failed to add photo to collection');
-                    }
-                  }
-                },
-                {
-                  text: "Remove Background",
-                  onPress: async () => {
-                    // Check background removal limit for non-premium users
-                    if (!isPremium && albums[albumName]?.images?.filter(img => img.includes('bgremoved_')).length >= 1) {
-                      Alert.alert(
-                        "Background Removal Limit",
-                        "Free users can only have 1 background removed image per album. Upgrade to Premium for unlimited removals.",
-                        [
-                          { text: "Keep Original", onPress: () => {} },
-                          { 
-                            text: "Upgrade", 
-                            onPress: () => router.push('/premium') 
-                          }
-                        ]
-                      );
-                      return;
-                    }
-
-                    setIsProcessing(true);
-                    try {
-                      const processingResult = await imageService.processImage(imageUri);
-                      await addImageToAlbum(albumName, processingResult.processed);
-                    } catch (error) {
-                      console.error('Background removal failed:', error);
-                      Alert.alert('Error', 'Failed to process photo');
-                    } finally {
-                      setIsProcessing(false);
-                    }
-                  }
-                },
-                {
-                  text: "Cancel",
-                  style: "cancel"
-                }
-              ]
-            );
-          }
+          text: "Camera",
+          onPress: showCameraPicker
         },
+        ...(!isPremium ? [{
+          text: "Upgrade to Premium",
+          onPress: () => router.push('/premium')
+        }] : []),
         {
           text: "Cancel",
           style: "cancel"
         }
       ]
     );
-  }, [category, addImageToAlbum, processMultipleImages, isPremium, albums, router]);
+}, [category, albums, router, isPremium]);
 
   const createAlbum = useCallback(async () => {
     if (!newAlbumName.trim() || !category) {
@@ -377,7 +388,6 @@ export default function GalleryScreen() {
       return;
     }
 
-    // Check album limit for non-premium users
     if (!isPremium && Object.keys(albums).length >= 1) {
       Alert.alert(
         "Album Limit Reached",
@@ -398,7 +408,6 @@ export default function GalleryScreen() {
     setIsModalVisible(false);
   }, [newAlbumName, albums, createNewAlbum, category, isPremium, router]);
 
-  // [Rest of your existing code remains exactly the same...]
   const handleDeleteAlbum = useCallback(async (name: string) => {
     Alert.alert(
       'Delete Collection',
@@ -628,209 +637,209 @@ export default function GalleryScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#121212', // Dark background
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: normalize(12),
-      borderBottomWidth: 1,
-      borderBottomColor: '#333',
-      backgroundColor: '#000000',
-      height: isSmallDevice ? normalize(60) : normalize(70),
-    },
-    title: {
-      fontSize: normalize(isSmallDevice ? 16 : 35),
-      fontWeight: 'bold',
-      color: '#FFFFFF',
-    },
-    albumList: {
-      padding: normalize(isSmallDevice ? 10 : 15),
-      backgroundColor: '#121212',
-    },
-    albumCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: normalize(isSmallDevice ? 10 : 15),
-      marginBottom: normalize(isSmallDevice ? 8 : 10),
-      backgroundColor: '#1E1E1E',
-      borderRadius: normalize(10),
-      shadowColor: '#FF0000',
-      shadowOffset: { width: 0, height: normalize(2) },
-      shadowOpacity: 0.2,
-      shadowRadius: normalize(4),
-      elevation: 2,
-    },
-    albumThumbnail: {
-      width: normalize(isSmallDevice ? 50 : 60),
-      height: normalize(isSmallDevice ? 50 : 60),
-      borderRadius: normalize(8),
-      backgroundColor: '#333',
-    },
-    albumInfo: {
-      flex: 1,
-      marginLeft: normalize(isSmallDevice ? 12 : 15),
-    },
-    albumName: {
-      fontSize: normalize(isSmallDevice ? 14 : 35),
-      fontWeight: '500',
-      color: '#FFFFFF',
-    },
-    albumCount: {
-      fontSize: normalize(isSmallDevice ? 12 : 21),
-      color: '#888',
-      marginTop: normalize(2),
-    },
-    imageGrid: {
-      padding: normalize(isSmallDevice ? 8 : 0),
-      backgroundColor: '#121212',
-    },
-    imageItem: {
-      margin: normalize(isSmallDevice ? 3 : 5),
-      backgroundColor: '#1E1E1E',
-      borderRadius: normalize(8),
-    },
-    image: {
-      width: '100%',
-      height: '100%',
-      borderRadius: normalize(8),
-    },
-    deleteImageButton: {
-      position: 'absolute',
-      top: normalize(isSmallDevice ? 3 : 5),
-      right: normalize(isSmallDevice ? 3 : 5),
-      backgroundColor: 'rgba(255,0,0,0.7)',
-      borderRadius: normalize(8),
-      padding: normalize(3),
-    },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: normalize(isSmallDevice ? 30 : 40),
-      backgroundColor: '#121212',
-    },
-    emptyListContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: '#121212',
-    },
-    emptyText: {
-      fontSize: normalize(isSmallDevice ? 14 : 25),
-      color: '#888',
-      marginBottom: normalize(isSmallDevice ? 15 : 20),
-    },
-    emptyAlbum: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: normalize(isSmallDevice ? 30 : 40),
-      backgroundColor: '#121212',
-    },
-    newAlbumButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: normalize(isSmallDevice ? 15 : 20),
-      margin: normalize(isSmallDevice ? 70 : 70),
-      backgroundColor: '#1E1E1E',
-      borderRadius: normalize(10),
-      borderWidth: 1,
-      borderColor: '#FF0000',
-      borderStyle: 'dashed',
-    },
-    newAlbumText: {
-      marginLeft: normalize(isSmallDevice ? 8 : 10),
-      color: '#FF0000',
-      fontWeight: '500',
-      fontSize: normalize(isSmallDevice ? 14 : 25),
-    },
-    addPhotoButton: {
-      marginTop: normalize(isSmallDevice ? 15 : 20),
-      paddingVertical: normalize(isSmallDevice ? 8 : 10),
-      paddingHorizontal: normalize(isSmallDevice ? 25 : 30),
-      backgroundColor: '#FF0000',
-      borderRadius: normalize(8),
-    },
-    addPhotoText: {
-      color: 'white',
-      fontWeight: 'bold',
-      fontSize: normalize(isSmallDevice ? 14 : 30),
-    },
-    fabContainer: {
-      position: 'absolute',
-      bottom: normalize(isSmallDevice ? 20 : 30),
-      right: normalize(isSmallDevice ? 20 : 30),
-    },
-    fab: {
-      width: normalize(isSmallDevice ? 50 : 60),
-      height: normalize(isSmallDevice ? 50 : 60),
-      borderRadius: normalize(25),
-      justifyContent: 'center',
-      alignItems: 'center',
-      elevation: 5,
-    },
-    fabSingle: {
-      backgroundColor: '#FF0000',
-    },
-    modalOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.8)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalContent: {
-      width: isSmallDevice ? '90%' : '80%',
-      backgroundColor: '#1E1E1E',
-      borderRadius: normalize(10),
-      padding: normalize(isSmallDevice ? 15 : 20),
-    },
-    modalTitle: {
-      fontSize: normalize(isSmallDevice ? 16 : 30),
-      fontWeight: 'bold',
-      marginBottom: normalize(isSmallDevice ? 12 : 15),
-      color: '#FFFFFF',
-    },
-    input: {
-      borderWidth: 1,
-      borderColor: '#333',
-      borderRadius: normalize(8),
-      padding: normalize(isSmallDevice ? 8 : 10),
-      marginBottom: normalize(isSmallDevice ? 12 : 15),
-      fontSize: normalize(isSmallDevice ? 14 : 16),
-      color: '#FFFFFF',
-      backgroundColor: '#333',
-    },
-    modalButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
-    processingOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.9)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    processingText: {
-      marginTop: normalize(isSmallDevice ? 12 : 15),
-      color: '#FFFFFF',
-      fontSize: normalize(isSmallDevice ? 14 : 16),
-    },
-    processingProgress: {
-      marginTop: normalize(5),
-      color: '#FF0000',
-      fontSize: normalize(isSmallDevice ? 12 : 14),
-    },
-    categoryTitle: {
-      fontSize: normalize(isSmallDevice ? 18 : 27),
-      fontWeight: 'bold',
-      color: '#FFFFFF',
-      textAlign: 'center',
-      top: "50%",
-      bottom: "50%",
-    },
-  });
+  container: {
+    flex: 1,
+    backgroundColor: '#121212',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: normalize(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    backgroundColor: '#000000',
+    height: isSmallDevice ? normalize(60) : normalize(70),
+  },
+  title: {
+    fontSize: normalize(isSmallDevice ? 16 : 35),
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  albumList: {
+    padding: normalize(isSmallDevice ? 10 : 15),
+    backgroundColor: '#121212',
+  },
+  albumCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: normalize(isSmallDevice ? 10 : 15),
+    marginBottom: normalize(isSmallDevice ? 8 : 10),
+    backgroundColor: '#1E1E1E',
+    borderRadius: normalize(10),
+    shadowColor: '#FF0000',
+    shadowOffset: { width: 0, height: normalize(2) },
+    shadowOpacity: 0.2,
+    shadowRadius: normalize(4),
+    elevation: 2,
+  },
+  albumThumbnail: {
+    width: normalize(isSmallDevice ? 50 : 60),
+    height: normalize(isSmallDevice ? 50 : 60),
+    borderRadius: normalize(8),
+    backgroundColor: '#333',
+  },
+  albumInfo: {
+    flex: 1,
+    marginLeft: normalize(isSmallDevice ? 12 : 15),
+  },
+  albumName: {
+    fontSize: normalize(isSmallDevice ? 14 : 35),
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  albumCount: {
+    fontSize: normalize(isSmallDevice ? 12 : 21),
+    color: '#888',
+    marginTop: normalize(2),
+  },
+  imageGrid: {
+    padding: normalize(isSmallDevice ? 8 : 0),
+    backgroundColor: '#121212',
+  },
+  imageItem: {
+    margin: normalize(isSmallDevice ? 3 : 5),
+    backgroundColor: '#1E1E1E',
+    borderRadius: normalize(8),
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    borderRadius: normalize(8),
+  },
+  deleteImageButton: {
+    position: 'absolute',
+    top: normalize(isSmallDevice ? 3 : 5),
+    right: normalize(isSmallDevice ? 3 : 5),
+    backgroundColor: 'rgba(255,0,0,0.7)',
+    borderRadius: normalize(8),
+    padding: normalize(3),
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: normalize(isSmallDevice ? 30 : 40),
+    backgroundColor: '#121212',
+  },
+  emptyListContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#121212',
+  },
+  emptyText: {
+    fontSize: normalize(isSmallDevice ? 14 : 25),
+    color: '#888',
+    marginBottom: normalize(isSmallDevice ? 15 : 20),
+  },
+  emptyAlbum: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: normalize(isSmallDevice ? 30 : 40),
+    backgroundColor: '#121212',
+  },
+  newAlbumButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: normalize(isSmallDevice ? 15 : 20),
+    margin: normalize(isSmallDevice ? 70 : 70),
+    backgroundColor: '#1E1E1E',
+    borderRadius: normalize(10),
+    borderWidth: 1,
+    borderColor: '#FF0000',
+    borderStyle: 'dashed',
+  },
+  newAlbumText: {
+    marginLeft: normalize(isSmallDevice ? 8 : 10),
+    color: '#FF0000',
+    fontWeight: '500',
+    fontSize: normalize(isSmallDevice ? 14 : 25),
+  },
+  addPhotoButton: {
+    marginTop: normalize(isSmallDevice ? 15 : 20),
+    paddingVertical: normalize(isSmallDevice ? 8 : 10),
+    paddingHorizontal: normalize(isSmallDevice ? 25 : 30),
+    backgroundColor: '#FF0000',
+    borderRadius: normalize(8),
+  },
+  addPhotoText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: normalize(isSmallDevice ? 14 : 30),
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: normalize(isSmallDevice ? 20 : 30),
+    right: normalize(isSmallDevice ? 20 : 30),
+  },
+  fab: {
+    width: normalize(isSmallDevice ? 50 : 60),
+    height: normalize(isSmallDevice ? 50 : 60),
+    borderRadius: normalize(25),
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+  },
+  fabSingle: {
+    backgroundColor: '#FF0000',
+  },
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: isSmallDevice ? '90%' : '80%',
+    backgroundColor: '#1E1E1E',
+    borderRadius: normalize(10),
+    padding: normalize(isSmallDevice ? 15 : 20),
+  },
+  modalTitle: {
+    fontSize: normalize(isSmallDevice ? 16 : 30),
+    fontWeight: 'bold',
+    marginBottom: normalize(isSmallDevice ? 12 : 15),
+    color: '#FFFFFF',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: normalize(8),
+    padding: normalize(isSmallDevice ? 8 : 10),
+    marginBottom: normalize(isSmallDevice ? 12 : 15),
+    fontSize: normalize(isSmallDevice ? 14 : 16),
+    color: '#FFFFFF',
+    backgroundColor: '#333',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  processingText: {
+    marginTop: normalize(isSmallDevice ? 12 : 15),
+    color: '#FFFFFF',
+    fontSize: normalize(isSmallDevice ? 14 : 16),
+  },
+  processingProgress: {
+    marginTop: normalize(5),
+    color: '#FF0000',
+    fontSize: normalize(isSmallDevice ? 12 : 14),
+  },
+  categoryTitle: {
+    fontSize: normalize(isSmallDevice ? 18 : 27),
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    top: "50%",
+    bottom: "50%",
+  },
+});
