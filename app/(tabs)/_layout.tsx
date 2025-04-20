@@ -5,6 +5,7 @@ import { useOutfitStore } from '../hooks/useOutfitStore';
 import { useRef } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 
+
 export default function TabLayout() {
   const randomize = useOutfitStore(state => state.randomize);
   const animValue = useRef(new Animated.Value(0)).current;
