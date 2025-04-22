@@ -39,7 +39,7 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { padding: isSmallDevice ? 2 : 6 }]}>
       <LinearGradient
-  colors={['floralwhite','darkred']}
+  colors={['floralwhite', 'floralwhite']}
   start={{ x: 1, y: 0 }}
   end={{ x: 1, y: 1 }}
   locations={[0.2, 1]}
