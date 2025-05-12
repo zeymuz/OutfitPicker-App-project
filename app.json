@@ -42,7 +42,9 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "react-native-vision-camera"
+      "react-native-vision-camera",
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
